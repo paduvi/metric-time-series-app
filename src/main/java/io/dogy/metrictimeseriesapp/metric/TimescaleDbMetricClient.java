@@ -3,12 +3,12 @@ package io.dogy.metrictimeseriesapp.metric;
 import com.adobe.aam.metrics.BufferedMetricClient;
 import com.adobe.aam.metrics.core.config.PublisherConfig;
 import com.adobe.aam.metrics.metric.Metric;
-import lombok.SneakyThrows;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,10 +54,13 @@ public class TimescaleDbMetricClient implements BufferedMetricClient {
                 metricName));
     }
 
-    @SneakyThrows
     @Override
     public void shutdown() {
-        this.dataSource.close();
+        try {
+            this.dataSource.close();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
     }
 
     @Override
