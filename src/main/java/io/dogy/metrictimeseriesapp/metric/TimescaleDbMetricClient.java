@@ -12,6 +12,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 @Component
@@ -21,6 +23,7 @@ public class TimescaleDbMetricClient implements BufferedMetricClient {
     private final PublisherConfig config;
     private final BasicDataSource dataSource;
     private final JdbcTemplate jdbcTemplate;
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     @Autowired
     public TimescaleDbMetricClient(PublisherConfig config, BasicDataSource dataSource, JdbcTemplate jdbcTemplate) {
@@ -58,6 +61,7 @@ public class TimescaleDbMetricClient implements BufferedMetricClient {
     public void shutdown() {
         try {
             this.dataSource.close();
+            this.executorService.shutdown();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -81,15 +85,17 @@ public class TimescaleDbMetricClient implements BufferedMetricClient {
         queue.drainTo(collection);
 
         System.out.println("Flush...");
-        for (Metric metric : collection) {
-            System.out.println(metric.getName() + " - " + metric.get());
-            String sql = String.format("INSERT INTO %s(timestamp, host, value) VALUES (NOW(), ?, ?)", metric.getName());
+        executorService.submit(() -> {
+            for (Metric metric : collection) {
+                System.out.println(metric.getName() + " - " + metric.get());
+                String sql = String.format("INSERT INTO %s(timestamp, host, value) VALUES (NOW(), ?, ?)", metric.getName());
 
-            jdbcTemplate.update(sql, ps -> {
-                ps.setString(1, config.tags().hostname().get());
-                ps.setDouble(2, metric.doGetAndReset());
-            });
-        }
+                jdbcTemplate.update(sql, ps -> {
+                    ps.setString(1, config.tags().hostname().get());
+                    ps.setDouble(2, metric.doGetAndReset());
+                });
+            }
+        });
     }
 
 }
