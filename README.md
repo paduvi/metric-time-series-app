@@ -8,7 +8,7 @@ This project's using:
 
 ## Instruction:
 
-1. Start TimescaleDB with Docker: `docker/run.sh`
+1. Start TimescaleDB and Grafana with Docker: `docker/run.sh`
 2. Run main class `App.java`
 3. Open browser: http://localhost:8080/ping
 4. See the result in any Postgresql Client or visualize it with Grafana. Cheer :)
